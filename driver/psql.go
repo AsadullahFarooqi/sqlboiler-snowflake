@@ -28,19 +28,19 @@ import (
 var templates embed.FS
 
 func init() {
-	drivers.RegisterFromInit("snowflake", &PostgresDriver{})
+	drivers.RegisterFromInit("snowflake", &SnowflakeDriver{})
 }
 
 // Assemble is more useful for calling into the library so you don't
 // have to instantiate an empty type.
 func Assemble(config drivers.Config) (dbinfo *drivers.DBInfo, err error) {
-	driver := PostgresDriver{}
+	driver := SnowflakeDriver{}
 	return driver.Assemble(config)
 }
 
-// PostgresDriver holds the database connection string and a handle
+// SnowflakeDriver holds the database connection string and a handle
 // to the database connection.
-type PostgresDriver struct {
+type SnowflakeDriver struct {
 	connStr        string
 	conn           *sql.DB
 	version        int
@@ -58,7 +58,7 @@ type columnIdentifier struct {
 }
 
 // Templates that should be added/overridden
-func (p *PostgresDriver) Templates() (map[string]string, error) {
+func (p *SnowflakeDriver) Templates() (map[string]string, error) {
 	tpls := make(map[string]string)
 	fs.WalkDir(templates, "override", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -82,7 +82,7 @@ func (p *PostgresDriver) Templates() (map[string]string, error) {
 }
 
 // Assemble all the information we need to provide back to the driver
-func (p *PostgresDriver) Assemble(config drivers.Config) (dbinfo *drivers.DBInfo, err error) {
+func (p *SnowflakeDriver) Assemble(config drivers.Config) (dbinfo *drivers.DBInfo, err error) {
 	defer func() {
 		if r := recover(); r != nil && err == nil {
 			dbinfo = nil
@@ -105,11 +105,11 @@ func (p *PostgresDriver) Assemble(config drivers.Config) (dbinfo *drivers.DBInfo
 
 	p.addEnumTypes, _ = config[drivers.ConfigAddEnumTypes].(bool)
 	p.enumNullPrefix = strmangle.TitleCase(config.DefaultString(drivers.ConfigEnumNullPrefix, "Null"))
-	p.connStr = PSQLBuildQueryString(user, pass, dbname, host, port, sslmode)
+	p.connStr = SnowflakeBuildQueryString(user, pass, dbname, host, port, sslmode)
 	p.configForeignKeys = config.MustForeignKeys(drivers.ConfigForeignKeys)
 	p.conn, err = sql.Open("snowflake", p.connStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "sqlboiler-psql failed to connect to database")
+		return nil, errors.Wrap(err, "sqlboiler-snowflake failed to connect to database")
 	}
 
 	defer func() {
@@ -121,11 +121,11 @@ func (p *PostgresDriver) Assemble(config drivers.Config) (dbinfo *drivers.DBInfo
 
 	p.version, err = p.getVersion()
 	if err != nil {
-		return nil, errors.Wrap(err, "sqlboiler-psql failed to get database version")
+		return nil, errors.Wrap(err, "sqlboiler-snowflake failed to get database version")
 	}
 
 	if err = p.loadUniqueColumns(); err != nil {
-		return nil, errors.Wrap(err, "sqlboiler-psql failed to load unique columns")
+		return nil, errors.Wrap(err, "sqlboiler-snowflake failed to load unique columns")
 	}
 
 	dbinfo = &drivers.DBInfo{
@@ -147,8 +147,8 @@ func (p *PostgresDriver) Assemble(config drivers.Config) (dbinfo *drivers.DBInfo
 	return dbinfo, err
 }
 
-// PSQLBuildQueryString builds a query string.
-func PSQLBuildQueryString(user, pass, dbname, host string, port int, sslmode string) string {
+// SnowflakeBuildQueryString builds a query string.
+func SnowflakeBuildQueryString(user, pass, dbname, host string, port int, sslmode string) string {
 	parts := []string{}
 	if len(user) != 0 {
 		parts = append(parts, fmt.Sprintf("user=%s", user))
@@ -172,10 +172,10 @@ func PSQLBuildQueryString(user, pass, dbname, host string, port int, sslmode str
 	return strings.Join(parts, " ")
 }
 
-// TableNames connects to the postgres database and
+// TableNames connects to the Snowflake database and
 // retrieves all table names from the information_schema where the
 // table schema is schema. It uses a whitelist and blacklist.
-func (p *PostgresDriver) TableNames(schema string, whitelist, blacklist []string) ([]string, error) {
+func (p *SnowflakeDriver) TableNames(schema string, whitelist, blacklist []string) ([]string, error) {
 	var names []string
 
 	query := `select table_name from information_schema.tables where table_schema = $1 and table_type = 'BASE TABLE'`
@@ -217,10 +217,10 @@ func (p *PostgresDriver) TableNames(schema string, whitelist, blacklist []string
 	return names, nil
 }
 
-// ViewNames connects to the postgres database and
+// ViewNames connects to the Snowflake database and
 // retrieves all view names from the information_schema where the
 // view schema is schema. It uses a whitelist and blacklist.
-func (p *PostgresDriver) ViewNames(schema string, whitelist, blacklist []string) ([]string, error) {
+func (p *SnowflakeDriver) ViewNames(schema string, whitelist, blacklist []string) ([]string, error) {
 	var names []string
 
 	query := `select 
@@ -276,7 +276,7 @@ func (p *PostgresDriver) ViewNames(schema string, whitelist, blacklist []string)
 }
 
 // ViewCapabilities return what actions are allowed for a view.
-func (p *PostgresDriver) ViewCapabilities(schema, name string) (drivers.ViewCapabilities, error) {
+func (p *SnowflakeDriver) ViewCapabilities(schema, name string) (drivers.ViewCapabilities, error) {
 	capabilities := drivers.ViewCapabilities{}
 
 	query := `select 
@@ -325,7 +325,7 @@ func (p *PostgresDriver) ViewCapabilities(schema, name string) (drivers.ViewCapa
 // for every table or view column that is made unique by an index or constraint.
 // This information is queried once, rather than for each table, for performance
 // reasons.
-func (p *PostgresDriver) loadUniqueColumns() error {
+func (p *SnowflakeDriver) loadUniqueColumns() error {
 	if p.uniqueColumns != nil {
 		return nil
 	}
@@ -381,7 +381,7 @@ select * from results;
 	return nil
 }
 
-func (p *PostgresDriver) ViewColumns(schema, tableName string, whitelist, blacklist []string) ([]drivers.Column, error) {
+func (p *SnowflakeDriver) ViewColumns(schema, tableName string, whitelist, blacklist []string) ([]drivers.Column, error) {
 	return p.Columns(schema, tableName, whitelist, blacklist)
 }
 
@@ -389,7 +389,7 @@ func (p *PostgresDriver) ViewColumns(schema, tableName string, whitelist, blackl
 // from the database information_schema.columns. It retrieves the column names
 // and column types and returns those as a []Column after TranslateColumnType()
 // converts the SQL types to Go types, for example: "varchar" to "string"
-func (p *PostgresDriver) Columns(schema, tableName string, whitelist, blacklist []string) ([]drivers.Column, error) {
+func (p *SnowflakeDriver) Columns(schema, tableName string, whitelist, blacklist []string) ([]drivers.Column, error) {
 	var columns []drivers.Column
 	args := []interface{}{schema, tableName}
 
@@ -654,7 +654,7 @@ func (p *PostgresDriver) Columns(schema, tableName string, whitelist, blacklist 
 }
 
 // PrimaryKeyInfo looks up the primary key for a table.
-func (p *PostgresDriver) PrimaryKeyInfo(schema, tableName string) (*drivers.PrimaryKey, error) {
+func (p *SnowflakeDriver) PrimaryKeyInfo(schema, tableName string) (*drivers.PrimaryKey, error) {
 	pkey := &drivers.PrimaryKey{}
 	var err error
 
@@ -705,7 +705,7 @@ func (p *PostgresDriver) PrimaryKeyInfo(schema, tableName string) (*drivers.Prim
 }
 
 // ForeignKeyInfo retrieves the foreign keys for a given table name.
-func (p *PostgresDriver) ForeignKeyInfo(schema, tableName string) ([]drivers.ForeignKey, error) {
+func (p *SnowflakeDriver) ForeignKeyInfo(schema, tableName string) ([]drivers.ForeignKey, error) {
 	dbForeignKeys, err := p.foreignKeyInfoFromDB(schema, tableName)
 	if err != nil {
 		return nil, errors.Wrap(err, "read foreign keys info from db")
@@ -713,7 +713,7 @@ func (p *PostgresDriver) ForeignKeyInfo(schema, tableName string) ([]drivers.For
 
 	return drivers.CombineConfigAndDBForeignKeys(p.configForeignKeys, tableName, dbForeignKeys), nil
 }
-func (p *PostgresDriver) foreignKeyInfoFromDB(schema, tableName string) ([]drivers.ForeignKey, error) {
+func (p *SnowflakeDriver) foreignKeyInfoFromDB(schema, tableName string) ([]drivers.ForeignKey, error) {
 	var fkeys []drivers.ForeignKey
 
 	whereConditions := []string{"pgn.nspname = $2", "pgc.relname = $1", "pgcon.contype = 'f'"}
@@ -765,10 +765,10 @@ func (p *PostgresDriver) foreignKeyInfoFromDB(schema, tableName string) ([]drive
 	return fkeys, nil
 }
 
-// TranslateColumnType converts postgres database types to Go types, for example
+// TranslateColumnType converts Snowflake database types to Go types, for example
 // "varchar" to "string" and "bigint" to "int64". It returns this parsed data
 // as a Column object.
-func (p *PostgresDriver) TranslateColumnType(c drivers.Column) drivers.Column {
+func (p *SnowflakeDriver) TranslateColumnType(c drivers.Column) drivers.Column {
 	if c.Nullable {
 		switch c.DBType {
 		case "bigint", "bigserial":
@@ -950,8 +950,8 @@ func getArrayType(c drivers.Column) (string, string) {
 	}
 }
 
-// Imports for the postgres driver
-func (p PostgresDriver) Imports() (importers.Collection, error) {
+// Imports for the Snowflake driver
+func (p SnowflakeDriver) Imports() (importers.Collection, error) {
 	var col importers.Collection
 
 	col.All = importers.Set{
@@ -960,7 +960,7 @@ func (p PostgresDriver) Imports() (importers.Collection, error) {
 		},
 	}
 	col.Singleton = importers.Map{
-		"psql_upsert": {
+		"snowflake_upsert": {
 			Standard: importers.List{
 				`"fmt"`,
 				`"strings"`,
@@ -972,12 +972,12 @@ func (p PostgresDriver) Imports() (importers.Collection, error) {
 		},
 	}
 	col.TestSingleton = importers.Map{
-		"psql_suites_test": {
+		"snowflake_suites_test": {
 			Standard: importers.List{
 				`"testing"`,
 			},
 		},
-		"psql_main_test": {
+		"snowflake_main_test": {
 			Standard: importers.List{
 				`"bytes"`,
 				`"database/sql"`,
@@ -1134,7 +1134,7 @@ func (p PostgresDriver) Imports() (importers.Collection, error) {
 }
 
 // getVersion gets the version of underlying database
-func (p *PostgresDriver) getVersion() (int, error) {
+func (p *SnowflakeDriver) getVersion() (int, error) {
 	type versionInfoType struct {
 		ServerVersionNum int `json:"server_version_num"`
 	}

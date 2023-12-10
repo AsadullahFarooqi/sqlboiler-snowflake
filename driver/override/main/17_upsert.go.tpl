@@ -111,7 +111,7 @@ func (o *{{$alias.UpSingular}}) Upsert({{if .NoContext}}exec boil.Executor{{else
 			conflict = make([]string, len({{$alias.DownSingular}}PrimaryKeyColumns))
 			copy(conflict, {{$alias.DownSingular}}PrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQueryPostgres(dialect, "{{$schemaTable}}", updateOnConflict, ret, update, conflict, insert, opts...)
+		cache.query = buildUpsertQuerySnowflake(dialect, "{{$schemaTable}}", updateOnConflict, ret, update, conflict, insert, opts...)
 
 		cache.valueMapping, err = queries.BindMapping({{$alias.DownSingular}}Type, {{$alias.DownSingular}}Mapping, insert)
 		if err != nil {
@@ -152,7 +152,7 @@ func (o *{{$alias.UpSingular}}) Upsert({{if .NoContext}}exec boil.Executor{{else
 		err = exec.QueryRowContext(ctx, cache.query, vals...).Scan(returns...)
 		{{end -}}
 		if errors.Is(err, sql.ErrNoRows) {
-			err = nil // Postgres doesn't return anything when there's no update
+			err = nil // Snowflake doesn't return anything when there's no update
 		}
 	} else {
 		{{if .NoContext -}}

@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	drivers.DriverMain(&driver.PostgresDriver{})
+	drivers.DriverMain(&driver.SnowflakeDriver{})
 }

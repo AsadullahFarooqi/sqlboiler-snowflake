@@ -17,8 +17,8 @@ func UpsertUpdateSet(updateSet string) UpsertOptionFunc {
 	}
 }
 
-// buildUpsertQueryPostgres builds a SQL statement string using the upsertData provided.
-func buildUpsertQueryPostgres(dia drivers.Dialect, tableName string, updateOnConflict bool, ret, update, conflict, whitelist []string, opts ...UpsertOptionFunc) string {
+// buildUpsertQuerySnowflake builds a SQL statement string using the upsertData provided.
+func buildUpsertQuerySnowflake(dia drivers.Dialect, tableName string, updateOnConflict bool, ret, update, conflict, whitelist []string, opts ...UpsertOptionFunc) string {
 	conflict = strmangle.IdentQuoteSlice(dia.LQ, dia.RQ, conflict)
 	whitelist = strmangle.IdentQuoteSlice(dia.LQ, dia.RQ, whitelist)
 	ret = strmangle.IdentQuoteSlice(dia.LQ, dia.RQ, ret)
