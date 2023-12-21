@@ -5,19 +5,22 @@ func test{{$alias.UpPlural}}Upsert(t *testing.T) {
 	if len({{$alias.DownSingular}}AllColumns) == len({{$alias.DownSingular}}PrimaryKeyColumns) {
 		t.Skip("Skipping table with only primary key columns")
 	}
+	if len(mySQL{{$alias.UpSingular}}UniqueColumns) == 0 {
+		t.Skip("Skipping table with no unique columns to conflict on")
+	}
 
 	seed := randomize.NewSeed()
 	var err error
 	// Attempt the INSERT side of an UPSERT
 	o := {{$alias.UpSingular}}{}
-	if err = randomize.Struct(seed, &o, {{$alias.DownSingular}}DBTypes, true); err != nil {
+	if err = randomize.Struct(seed, &o, {{$alias.DownSingular}}DBTypes, false); err != nil {
 		t.Errorf("Unable to randomize {{$alias.UpSingular}} struct: %s", err)
 	}
 
 	{{if not .NoContext}}ctx := context.Background(){{end}}
 	tx := MustTx({{if .NoContext}}{{if .NoContext}}boil.Begin(){{else}}boil.BeginTx(ctx, nil){{end}}{{else}}boil.BeginTx(ctx, nil){{end}})
 	defer func() { _ = tx.Rollback() }()
-	if err = o.Upsert({{if not .NoContext}}ctx, {{end -}} tx, false, nil, boil.Infer(), boil.Infer()); err != nil {
+	if err = o.Upsert({{if not .NoContext}}ctx, {{end -}} tx, boil.Infer(), boil.Infer()); err != nil {
 		t.Errorf("Unable to upsert {{$alias.UpSingular}}: %s", err)
 	}
 
@@ -34,7 +37,7 @@ func test{{$alias.UpPlural}}Upsert(t *testing.T) {
 		t.Errorf("Unable to randomize {{$alias.UpSingular}} struct: %s", err)
 	}
 
-	if err = o.Upsert({{if not .NoContext}}ctx, {{end -}} tx, true, nil, boil.Infer(), boil.Infer()); err != nil {
+	if err = o.Upsert({{if not .NoContext}}ctx, {{end -}} tx, boil.Infer(), boil.Infer()); err != nil {
 		t.Errorf("Unable to upsert {{$alias.UpSingular}}: %s", err)
 	}
 
