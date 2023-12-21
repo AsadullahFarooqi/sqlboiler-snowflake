@@ -100,7 +100,7 @@ func (m *SnowflakeDriver) Assemble(config drivers.Config) (dbinfo *drivers.DBInf
 	m.configForeignKeys = config.MustForeignKeys(drivers.ConfigForeignKeys)
 	m.conn, err = sql.Open("snowflake", m.connStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "sqlboiler-mysql failed to connect to database")
+		return nil, errors.Wrap(err, "sqlboiler-snowflake failed to connect to database")
 	}
 
 	defer func() {
