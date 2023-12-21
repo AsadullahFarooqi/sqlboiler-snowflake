@@ -3,6 +3,7 @@ module github.com/asadullahfarooqi/sqlboiler-snowflake
 go 1.21.0
 
 require (
+	github.com/asadullahfarooqi/sqlboiler/v4 v4.0.0-20231221050115-73df579e0157
 	github.com/friendsofgo/errors v0.9.2
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/snowflakedb/gosnowflake v1.7.1

@@ -18,9 +18,9 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/asadullahfarooqi/sqlboiler/v4/drivers"
 	_ "github.com/snowflakedb/gosnowflake"
 	"github.com/stretchr/testify/require"
-	"github.com/volatiletech/sqlboiler/v4/drivers"
 )
 
 var (
